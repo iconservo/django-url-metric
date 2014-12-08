@@ -23,7 +23,7 @@ def increase_host_count(hostname):
 @periodic_task(run_every=crontab(hour=0, minute=5), name="url_metric.export_host_data")
 def export_host_data(report_date=None):
     if not report_date:
-        report_date = datetime.date.now()
+        report_date = datetime.date.today()
 
 
     exporter = exports.get_exporter()

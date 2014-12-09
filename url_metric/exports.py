@@ -4,18 +4,16 @@ from django.conf import settings
 
 MAPPING = {}
 
-try:
-    import librato
-except ImportError:
-    librato = None
-MAPPING["librato"] = librato
-
 def get_exporter():
-    ExporterClass = getattr(settings, "URL_METRIC_EXPORT_ENGINE", None)
-    if not ExporterClass:
+    exporter_class_name = getattr(settings, "URL_METRIC_EXPORT_ENGINE", None)
+    if not exporter_class_name:
         return None
 
-    exporter = ExporterClass()
+    cls = MAPPING.get(exporter_class_name, None)
+    if not cls:
+        return None
+
+    exporter = cls()
 
     return exporter
 
@@ -32,3 +30,10 @@ class LibratoExporter(object):
 
     def save(self):
         self.queue.submit()
+
+
+try:
+    import librato
+    MAPPING["librato"] = LibratoExporter
+except ImportError:
+    librato = None

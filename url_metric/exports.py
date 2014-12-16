@@ -19,6 +19,9 @@ def get_exporter():
 
 
 class LibratoExporter(object):
+    """
+    Direct librator exporter module
+    """
     def __init__(self):
         user = settings.URL_METRIC_LIBRATO_USER
         token = settings.URL_METRIC_LIBRATO_TOKEN

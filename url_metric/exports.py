@@ -40,3 +40,32 @@ try:
     MAPPING["librato"] = LibratoExporter
 except ImportError:
     librato = None
+
+
+class DummyExporter(object):
+    instance = None
+
+    def __init__(self):
+        DummyExporter.instance = self
+        self.metrics = {}
+
+    def export(self, slug, value, source):
+        self.metrics[slug] = value
+        v = self.metrics.get(slug, 0)
+        try:
+            v += value
+        except TypeError:
+            v = value
+        self.metrics[slug] = v
+
+    def save(self):
+        pass
+
+    def metric(self, metric, value=1):
+        self.metrics.setdefault(metric, 0)
+        self.metrics[metric] += value
+
+    def clear(self):
+        self.metrics = {}
+
+MAPPING["dummy"] = DummyExporter

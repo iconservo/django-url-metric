@@ -12,21 +12,6 @@ from url_metric import exports, custom_opener, models
 from django.conf import settings
 
 
-METRIC_EXPORTER = None
-class TestExporter(object):
-    def __init__(self):
-
-        global METRIC_EXPORTER
-        METRIC_EXPORTER = self
-        self.metrics = {}
-
-
-    def metric(self, metric, value=1):
-        self.metrics.setdefault(metric, 0)
-        self.metrics[metric] += value
-
-exports.MAPPING["test_exporter"] = TestExporter
-
 class SimpleTest(TestCase):
     def test_get_exporter_none(self):
         exporter = exports.get_exporter()
@@ -62,16 +47,16 @@ class MiddlewareTest(LiveServerTestCase):
     @override_settings(URL_METRIC_URL_PATTERNS={r"200:GET:\/admin.*": "AdminPageView",
                                                 r"200:PUT:\/asd/asd/.*": "Change ASD",},
                        TEST_RUNNER='djcelery.contrib.test_runner.CeleryTestSuiteRunner',
-                       URL_METRIC_EXPORT_ENGINE="test_exporter",)
+                       URL_METRIC_EXPORT_ENGINE="dummy",)
     def test_basic_middleware(self):
         self.client.put("/asd/asd/")
-        self.assertEqual(METRIC_EXPORTER.metrics.get("Change ASD", None), 1)
+        self.assertEqual(exports.DummyExporter.instance.metrics.get("Change ASD", None), 1)
 
     @override_settings(URL_METRIC_URL_PATTERNS={r"200:GET:\/admin.*": "AdminPageView",
                                                 r"200:PUT:\/asd/asd/.*": "Change ASD",
                                                 r"200:PUT:\/asd/asd/das": "Change ASD",},
                        TEST_RUNNER='djcelery.contrib.test_runner.CeleryTestSuiteRunner',
-                       URL_METRIC_EXPORT_ENGINE="test_exporter",)
+                       URL_METRIC_EXPORT_ENGINE="dummy",)
     def test_multiple_matches(self):
         self.client.put("/asd/asd/das")
-        self.assertEqual(METRIC_EXPORTER.metrics.get("Change ASD", None), 1)
+        self.assertEqual(exports.DummyExporter.instance.metrics.get("Change ASD", None), 1)

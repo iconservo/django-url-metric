@@ -34,6 +34,9 @@ class LibratoExporter(object):
     def save(self):
         self.queue.submit()
 
+    def metric(self, metric, value=1):
+        pass
+
 
 try:
     import librato

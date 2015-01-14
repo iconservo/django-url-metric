@@ -25,6 +25,14 @@ class SimpleTest(TestCase):
         exporter = exports.get_exporter()
         self.assertIsNotNone(exporter, "There should be an url metric")
 
+    @override_settings(URL_METRIC_EXPORT_ENGINE="librato",
+                       URL_METRIC_LIBRATO_USER="test",
+                       URL_METRIC_LIBRATO_TOKEN="test",
+                       URL_METRIC_SOURCE="testing")
+    def test_exporter_source(self):
+        exporter = exports.get_exporter()
+        self.assertIsNotNone(exporter, "There should be an url metric")
+        self.assertEqual(exporter.source, "testing")
 
     @override_settings(CELERY_ALWAYS_EAGER=True,
                        TEST_RUNNER='djcelery.contrib.test_runner.CeleryTestSuiteRunner')

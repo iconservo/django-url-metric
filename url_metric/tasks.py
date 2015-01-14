@@ -21,17 +21,22 @@ def increase_host_count(hostname):
 
     result.save()
 
+@task(name="url_metric.metric")
+def metric(metric_name, value=1):
+    exporter = exports.get_exporter()
+    exporter.metric(metric_name, value)
+
+
 @periodic_task(run_every=crontab(hour=0, minute=5), name="url_metric.export_host_data")
 def export_host_data(report_date=None):
     if not report_date:
         report_date = datetime.date.today() - datetime.timedelta(days=1)
 
 
-    source = getattr(settings, "URL_METRIC_LIBRATO_SOURCE", None)
     exporter = exports.get_exporter()
     report_data = models.HostCounter.objects.filter(date=report_date)
     for data in report_data:
         key = "Host.%s" % data.hostname
-        exporter.export(key, data.count, source)
+        exporter.export(key, data.count)
 
     exporter.save()

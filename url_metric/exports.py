@@ -6,6 +6,7 @@ MAPPING = {}
 
 def get_exporter():
     exporter_class_name = getattr(settings, "URL_METRIC_EXPORT_ENGINE", None)
+    source = getattr(settings, "URL_METRIC_SOURCE", None)
     if not exporter_class_name:
         return None
 
@@ -13,29 +14,43 @@ def get_exporter():
     if not cls:
         return None
 
-    exporter = cls()
+    exporter = cls(source=source)
 
     return exporter
 
 
-class LibratoExporter(object):
+class BaseExporter(object):
+    def __init__(self, source):
+        self.source = source
+
+    def export(self, metric, value):
+        pass
+
+    def save(self):
+        pass
+
+    def metric(self, metric, value=1):
+        pass
+
+class LibratoExporter(BaseExporter):
     """
     Direct librator exporter module
     """
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
+        super(LibratoExporter, self).__init__(*args, **kwargs)
         user = settings.URL_METRIC_LIBRATO_USER
         token = settings.URL_METRIC_LIBRATO_TOKEN
         self.connection = librato.connect(user, token)
         self.queue = self.connection.new_queue()
 
-    def export(self, slug, value, source):
-        self.queue.add(slug, value, type="gauge", source=source)
+    def export(self, slug, value):
+        self.queue.add(slug, value, type="gauge", source=self.source)
 
     def save(self):
         self.queue.submit()
 
     def metric(self, metric, value=1):
-        pass
+        return self.connection.submit(metric, value, source=self.source)
 
 
 try:
@@ -45,14 +60,15 @@ except ImportError:
     librato = None
 
 
-class DummyExporter(object):
+class DummyExporter(BaseExporter):
     instance = None
 
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
+        super(DummyExporter, self).__init__(*args, **kwargs)
         DummyExporter.instance = self
         self.metrics = {}
 
-    def export(self, slug, value, source):
+    def export(self, slug, value):
         self.metrics[slug] = value
         v = self.metrics.get(slug, 0)
         try:

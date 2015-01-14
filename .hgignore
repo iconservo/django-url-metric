@@ -1,4 +1,6 @@
 syntax: glob
-project
 .idea
 *.pyc
+venv
+build
+db.sqlite3

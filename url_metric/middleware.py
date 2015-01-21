@@ -1,3 +1,4 @@
+import datetime
 from django.core.exceptions import MiddlewareNotUsed
 import re
 from django.conf import settings
@@ -17,9 +18,12 @@ class UrlMeaningMiddleware(object):
             raise MiddlewareNotUsed()
 
         self.metric_exporter = get_exporter()
+        if not self.metric_exporter:
+            raise MiddlewareNotUsed()
 
     def metric(self, metric_name, value=1):
         self.metric_exporter.metric(metric_name, value)
+
 
     def process_response(self, request, response):
         path = request.path
@@ -34,5 +38,27 @@ class UrlMeaningMiddleware(object):
 
         for metric_name in metrics:
             self.metric(metric_name)
+
+        return response
+
+class RequestTimerMiddleware(object):
+    """
+    Timer for requests
+    """
+    TIMER_METRIC_NAME = "Request.Duration"
+
+    def __init__(self):
+        self.metric_exporter = get_exporter()
+        if not self.metric_exporter:
+            raise MiddlewareNotUsed()
+
+    def process_request(self, request):
+        self.last_request_time = datetime.datetime.today()
+        return None
+
+    def process_response(self, request, response):
+        current_time = datetime.datetime.today()
+        delta = current_time - self.last_request_time
+        self.metric_exporter.metric(self.TIMER_METRIC_NAME, delta.microseconds)
 
         return response

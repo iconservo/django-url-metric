@@ -58,7 +58,6 @@ class SimpleTest(TestCase):
 class MiddlewareTest(LiveServerTestCase):
     @override_settings(URL_METRIC_URL_PATTERNS={r"200:GET:\/admin.*": "AdminPageView",
                                                 r"200:PUT:\/asd/asd/.*": "Change ASD",},
-                       TEST_RUNNER='djcelery.contrib.test_runner.CeleryTestSuiteRunner',
                        URL_METRIC_EXPORT_ENGINE="dummy",)
     def test_basic_middleware(self):
         self.client.put("/asd/asd/")
@@ -67,8 +66,13 @@ class MiddlewareTest(LiveServerTestCase):
     @override_settings(URL_METRIC_URL_PATTERNS={r"200:GET:\/admin.*": "AdminPageView",
                                                 r"200:PUT:\/asd/asd/.*": "Change ASD",
                                                 r"200:PUT:\/asd/asd/das": "Change ASD",},
-                       TEST_RUNNER='djcelery.contrib.test_runner.CeleryTestSuiteRunner',
                        URL_METRIC_EXPORT_ENGINE="dummy",)
     def test_multiple_matches(self):
         self.client.put("/asd/asd/das")
         self.assertEqual(exports.DummyExporter.instance.metrics.get("Change ASD", None), 1)
+
+    @override_settings(MIDDLEWARE_CLASSES=['url_metric.middleware.RequestTimerMiddleware'],
+                       URL_METRIC_EXPORT_ENGINE="dummy",)
+    def test_request_timer(self):
+        self.client.put("/asd/asd/das")
+        self.assertIsNotNone(exports.DummyExporter.instance.metrics.get("Request.Duration", None))

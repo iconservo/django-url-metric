@@ -7,8 +7,13 @@ from django.conf import settings
 
 from url_metric import models, exports
 
-@task(name="url_metric.increase_host_count")
-def increase_host_count(hostname):
+@task(name="url_metric.increase_host_count_task")
+def increase_host_count_task(hostname):
+    """
+    Increases host count in database (for now)
+    :param hostname:
+    :return:
+    """
     now = datetime.date.today()
     result = models.HostCounter.objects.filter(hostname=hostname, date=now).first()
     if not result:
@@ -20,6 +25,20 @@ def increase_host_count(hostname):
         result.count += 1
 
     result.save()
+
+
+def increase_host_count_metric(hostname):
+    """
+    Increases host count directly in metric
+    Useful when there are too many remote queries
+    :param hostname:
+    :return:
+    """
+    metric_name = "Host.%s" % hostname
+    exporter = exports.get_exporter()
+    if exporter:
+        exporter.metric(metric_name, 1)
+
 
 @task(name="url_metric.metric")
 def metric(metric_name, value=1):

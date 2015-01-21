@@ -14,7 +14,8 @@ class HTTPHandler(urllib2.HTTPHandler):
         if data.code == 200:
             hostname = req.host
             from url_metric import tasks
-            tasks.increase_host_count.delay(hostname)
+            #tasks.increase_host_count.delay(hostname)
+            tasks,increase_host_count_metric(hostname)
 
         return data
 
@@ -25,7 +26,8 @@ class HTTPSHandler(urllib2.HTTPSHandler):
         if data.code == 200:
             hostname = req.host
             from url_metric import tasks
-            tasks.increase_host_count.delay(hostname)
+            #tasks.increase_host_count.delay(hostname)
+            tasks,increase_host_count_metric(hostname)
 
         return data
 
@@ -106,7 +108,8 @@ def requests_wrapper(method, url, *args, **kwargs):
         parsed = urlparse.urlparse(url)
         hostname = parsed.hostname
         from url_metric import tasks
-        tasks.increase_host_count.delay(hostname)
+        #tasks.increase_host_count.delay(hostname)
+        tasks.increase_host_count_metric(hostname)
     return r
 
 

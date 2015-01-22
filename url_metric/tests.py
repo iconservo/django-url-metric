@@ -60,6 +60,7 @@ class MiddlewareTest(LiveServerTestCase):
                                                 r"200:PUT:\/asd/asd/.*": "Change ASD",},
                        URL_METRIC_EXPORT_ENGINE="dummy",)
     def test_basic_middleware(self):
+        exports.DummyExporter.clear_metrics()
         self.client.put("/asd/asd/")
         self.assertEqual(exports.DummyExporter.instance.metrics.get("Change ASD", None), 1)
 
@@ -68,11 +69,13 @@ class MiddlewareTest(LiveServerTestCase):
                                                 r"200:PUT:\/asd/asd/das": "Change ASD",},
                        URL_METRIC_EXPORT_ENGINE="dummy",)
     def test_multiple_matches(self):
+        exports.DummyExporter.clear_metrics()
         self.client.put("/asd/asd/das")
         self.assertEqual(exports.DummyExporter.instance.metrics.get("Change ASD", None), 1)
 
     @override_settings(MIDDLEWARE_CLASSES=['url_metric.middleware.RequestTimerMiddleware'],
                        URL_METRIC_EXPORT_ENGINE="dummy",)
     def test_request_timer(self):
+        exports.DummyExporter.clear_metrics()
         self.client.put("/asd/asd/das")
         self.assertIsNotNone(exports.DummyExporter.instance.metrics.get("Request.Duration", None))

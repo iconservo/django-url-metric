@@ -63,10 +63,19 @@ except ImportError:
 class DummyExporter(BaseExporter):
     instance = None
 
-    def __init__(self, *args, **kwargs):
-        super(DummyExporter, self).__init__(*args, **kwargs)
-        DummyExporter.instance = self
-        self.metrics = {}
+    def __new__(cls, *args, **kwargs):
+        if DummyExporter.instance:
+            return DummyExporter.instance
+
+        instance = super(DummyExporter, cls).__new__(cls, *args, **kwargs)
+        DummyExporter.instance = instance
+        instance.metrics = {}
+        return instance
+
+    @classmethod
+    def clear_metrics(cls):
+        if cls.instance:
+            cls.instance.metrics = {}
 
     def export(self, slug, value):
         self.metrics[slug] = value

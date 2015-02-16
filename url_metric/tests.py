@@ -37,22 +37,18 @@ class SimpleTest(TestCase):
     @override_settings(CELERY_ALWAYS_EAGER=True,
                        TEST_RUNNER='djcelery.contrib.test_runner.CeleryTestSuiteRunner')
     def test_urllib2(self):
-        """
         custom_opener.urlopen("http://www.bing.com/")
         model = models.HostCounter.objects.filter(hostname="www.bing.com").first()
         self.assertIsNotNone(model, "Unable to find proper model")
-        self.assertEqual(model.count, 1, "Google.com is not accessed 1 time. Found %s times instead" % model.count)
-        """
+        self.assertEqual(model.count, 1, "www.bing.com is not accessed 1 time. Found %s times instead" % model.count)
 
     @override_settings(CELERY_ALWAYS_EAGER=True,
                        TEST_RUNNER='djcelery.contrib.test_runner.CeleryTestSuiteRunner')
-    def test_urllib2(self):
-        """
+    def test_requests(self):
         custom_opener.get("http://www.bing.com/")
         model = models.HostCounter.objects.filter(hostname="www.bing.com").first()
         self.assertIsNotNone(model, "Unable to find proper model")
-        self.assertEqual(model.count, 1, "Google.com is not accessed 1 time. Found %s times instead" % model.count)
-        """
+        self.assertEqual(model.count, 1, "www.bing.com is not accessed 1 time. Found %s times instead" % model.count)
 
 
 class MiddlewareTest(LiveServerTestCase):

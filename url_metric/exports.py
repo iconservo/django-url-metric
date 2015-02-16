@@ -39,7 +39,7 @@ class BaseExporter(object):
 
 class LibratoExporter(BaseExporter):
     """
-    Direct librator exporter module
+    Direct librato exporter module
     """
     def __init__(self, *args, **kwargs):
         super(LibratoExporter, self).__init__(*args, **kwargs)

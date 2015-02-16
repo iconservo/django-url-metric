@@ -3,6 +3,7 @@ from django.core.exceptions import MiddlewareNotUsed
 import re
 from django.conf import settings
 from url_metric.exports import get_exporter
+from url_metric.tasks import metric
 
 
 class UrlMeaningMiddleware(object):
@@ -48,8 +49,8 @@ class RequestTimerMiddleware(object):
     TIMER_METRIC_NAME = "Request.Duration"
 
     def __init__(self):
-        self.metric_exporter = get_exporter()
-        if not self.metric_exporter:
+        metric_exporter = get_exporter()
+        if not metric_exporter:
             raise MiddlewareNotUsed()
 
     def process_request(self, request):
@@ -59,6 +60,6 @@ class RequestTimerMiddleware(object):
     def process_response(self, request, response):
         current_time = datetime.datetime.today()
         delta = current_time - self.last_request_time
-        self.metric_exporter.metric(self.TIMER_METRIC_NAME, delta.microseconds)
+        metric(self.TIMER_METRIC_NAME, delta.microseconds)
 
         return response

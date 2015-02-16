@@ -4,6 +4,11 @@ from django.conf import settings
 
 MAPPING = {}
 
+# TODO: exporter singleton support
+# TODO: custom source
+# TODO: rename metric to gauge
+
+
 def get_exporter():
     exporter_class_name = getattr(settings, "URL_METRIC_EXPORT_ENGINE", None)
     source = getattr(settings, "URL_METRIC_SOURCE", None)

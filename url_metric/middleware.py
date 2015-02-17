@@ -58,8 +58,12 @@ class RequestTimerMiddleware(object):
         return None
 
     def process_response(self, request, response):
+        last_request_time = getattr(self, "last_request_time", None)
+        if not last_request_time:
+            return response
+
         current_time = datetime.datetime.today()
-        delta = current_time - self.last_request_time
+        delta = current_time - last_request_time
         metric(self.TIMER_METRIC_NAME, delta.microseconds)
 
         return response

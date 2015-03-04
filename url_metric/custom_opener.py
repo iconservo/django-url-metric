@@ -1,5 +1,6 @@
 __author__ = 'margus'
 
+import logging
 import urlparse
 import socket
 import urllib2
@@ -119,11 +120,15 @@ def requests_wrapper(method, url, *args, **kwargs):
     :return:
     """
     r = method(url, *args, **kwargs)
-    if r.status_code == 200:
-        parsed = urlparse.urlparse(url)
-        hostname = parsed.hostname
-        from url_metric import tasks
-        tasks.increase_host_count_task.delay(hostname)
+    parsed = urlparse.urlparse(url)
+    hostname = parsed.hostname
+
+    #from url_metric import tasks
+    #tasks.increase_host_count_task.delay(hostname)
+
+    response_data = getattr(r, "content", None)
+    logger = logging.getLogger("external.access.%s" % hostname)
+    logger.info(msg="", extra={"url": url, "status_code": r.status_code, "response_data": response_data})
 
     return r
 

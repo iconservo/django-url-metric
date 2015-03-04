@@ -8,6 +8,19 @@ try:
 except:
     requests = None
 
+class WrappedResponse(object):
+    def __init__(self, response, content):
+        self._read_content = content
+        self._wrapped = response
+
+    def __getattr__(self, item):
+        return getattr(self._wrapped, item)
+
+    def read(self):
+        x = self._read_content
+        self._read_content = ''
+        return x
+
 class HTTPHandler(urllib2.HTTPHandler):
     def http_open(self, req):
         data = urllib2.HTTPHandler.http_open(self, req)
@@ -16,7 +29,9 @@ class HTTPHandler(urllib2.HTTPHandler):
             from url_metric import tasks
             tasks.increase_host_count_task.delay(hostname)
 
-        return data
+        content = data.read()
+
+        return WrappedResponse(data, content)
 
 
 class HTTPSHandler(urllib2.HTTPSHandler):
@@ -27,7 +42,9 @@ class HTTPSHandler(urllib2.HTTPSHandler):
             from url_metric import tasks
             tasks.increase_host_count_task.delay(hostname)
 
-        return data
+        content = data.read()
+
+        return WrappedResponse(data, content)
 
 
 custom_opener = None
@@ -107,6 +124,7 @@ def requests_wrapper(method, url, *args, **kwargs):
         hostname = parsed.hostname
         from url_metric import tasks
         tasks.increase_host_count_task.delay(hostname)
+
     return r
 
 

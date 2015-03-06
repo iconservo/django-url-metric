@@ -54,7 +54,7 @@ class SimpleTest(TestCase):
                        CELERY_ALWAYS_EAGER=True,
                        URL_METRIC_HOST_OVERRIDES = {
                             'maps.googleapis.com/maps/api/timezone/json': "maps.googleapis.com.TimeZone",
-                            'maps.google.com/maps/api/elevation/json': "maps.googleapis.com.Elevation",
+                            'maps.google.com/maps/api/elevation/json': "maps.google.com.Elevation",
                             'maps.googleapis.com/maps/api/geocode/json': "maps.googleapis.com.GeoCode",
                         })
     def test_metric(self):
@@ -79,7 +79,7 @@ class SimpleTest(TestCase):
         self.assertDictEqual(exports.DummyExporter.instance.metrics, {
                 'External.maps.googleapis.com.TimeZone.GET.200': 1,
                 'External.maps.googleapis.com.GeoCode.GET.200': 1,
-                'External.maps.googleapis.com.Elevation.GET.200': 1
+                'External.maps.google.com.Elevation.GET.200': 1
             }
         )
 

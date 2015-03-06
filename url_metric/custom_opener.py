@@ -23,6 +23,13 @@ def metric_request(hostname, method, status_code, path = ''):
     metric.delay(metric_name, hostname = host_url_metric)
 
 
+def get_logger(hostname, path = '', logger_type='debug'):
+    host_with_path = "%s%s" % (hostname, path)
+    host_url_loggers = getattr(settings, 'URL_METRIC_HOST_OVERRIDES', {})
+
+    host_url_logger_name = host_url_loggers.get(host_with_path, hostname)
+
+    return logging.getLogger("external.%s.%s" % (logger_type, host_url_logger_name))
 
 class WrappedResponse(object):
     def __init__(self, response, content):
@@ -52,6 +59,10 @@ class HTTPHandler(urllib2.HTTPHandler):
         tasks.increase_host_count_task.delay(hostname)
 
         content = data.read()
+
+        logger = get_logger(hostname, path, 'access')
+        logger.info(msg="", extra={"url": url, "status_code": data.code, "response_data": content})
+
         metric_request(hostname, method, data.code, path)
 
         return WrappedResponse(data, content)
@@ -72,6 +83,10 @@ class HTTPSHandler(urllib2.HTTPSHandler):
         tasks.increase_host_count_task.delay(hostname)
 
         content = data.read()
+
+        logger = get_logger(hostname, path, 'access')
+        logger.info(msg="", extra={"url": url, "status_code": data.code, "response_data": content})
+
         metric_request(hostname, method, data.code, path)
 
         return WrappedResponse(data, content)
@@ -172,7 +187,7 @@ def requests_wrapper(method, url, *args, **kwargs):
     tasks.increase_host_count_task.delay(hostname)
 
     response_data = getattr(r, "content", None)
-    logger = logging.getLogger("external.access.%s" % hostname)
+    logger = get_logger(hostname, path, 'access')#logging.getLogger("external.access.%s" % hostname)
     logger.info(msg="", extra={"url": url, "status_code": r.status_code, "response_data": response_data})
 
     return r

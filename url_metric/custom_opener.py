@@ -12,27 +12,8 @@ except:
 from url_metric import exports
 
 def metric_request(hostname, method, status_code):
-    host_metrics = {
-        'maps.google.com': 'external.%s' % hostname,
-        'maps.googleapis.com': 'external.%s' % hostname,
-        'api.smartystreets.com': 'external.%s' % hostname,
-        'pubsub.pubnub.com': 'external.%s' % hostname,
-    }
 
-    metric_name = host_metrics.get(hostname, None)
-    if metric_name is None:
-        return False
-
-    host_additional_name = {
-        'maps.google.com': '%s_%s' % (method, status_code),
-        'maps.googleapis.com': '%s_%s' % (method, status_code),
-        'api.smartystreets.com': '%s_%s' % (method, status_code),
-        'pubsub.pubnub.com': '%s_%s' % (method, status_code),
-    }
-
-    _additional = host_additional_name.get(hostname, None)
-    if _additional:
-        metric_name = "%s_%s" % (metric_name, _additional)
+    metric_name = "External.%s.%s.%s" % (hostname, method, status_code)
 
     try:
         exporter = exports.get_exporter()
@@ -68,12 +49,9 @@ class HTTPHandler(urllib2.HTTPHandler):
 
         data = urllib2.HTTPHandler.http_open(self, req)
 
-        """
-        if data.code == 200:
-            hostname = req.host
-            from url_metric import tasks
-            tasks.increase_host_count_task.delay(hostname)
-        """
+        from url_metric import tasks
+        tasks.increase_host_count_task.delay(hostname)
+
         content = data.read()
         metric_request(hostname, method, data.code)
 
@@ -86,12 +64,10 @@ class HTTPSHandler(urllib2.HTTPSHandler):
         method = req.get_method()
 
         data = urllib2.HTTPSHandler.https_open(self, req)
-        """
-        if data.code == 200:
-            hostname = req.host
-            from url_metric import tasks
-            tasks.increase_host_count_task.delay(hostname)
-        """
+
+        from url_metric import tasks
+        tasks.increase_host_count_task.delay(hostname)
+
         content = data.read()
         metric_request(hostname, method, data.code)
 
@@ -188,8 +164,8 @@ def requests_wrapper(method, url, *args, **kwargs):
 
     metric_request(hostname, req_method, r.status_code)
 
-    #from url_metric import tasks
-    #tasks.increase_host_count_task.delay(hostname)
+    from url_metric import tasks
+    tasks.increase_host_count_task.delay(hostname)
 
     response_data = getattr(r, "content", None)
     logger = logging.getLogger("external.access.%s" % hostname)

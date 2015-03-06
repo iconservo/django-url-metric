@@ -50,6 +50,39 @@ class SimpleTest(TestCase):
         self.assertIsNotNone(model, "Unable to find proper model")
         self.assertEqual(model.count, 1, "www.bing.com is not accessed 1 time. Found %s times instead" % model.count)
 
+    @override_settings(URL_METRIC_EXPORT_ENGINE="dummy",
+                       CELERY_ALWAYS_EAGER=True,
+                       URL_METRIC_HOST_OVERRIDES = {
+                            'maps.googleapis.com/maps/api/timezone/json': "maps.googleapis.com.TimeZone",
+                            'maps.google.com/maps/api/elevation/json': "maps.googleapis.com.Elevation",
+                            'maps.googleapis.com/maps/api/geocode/json': "maps.googleapis.com.GeoCode",
+                        })
+    def test_metric(self):
+        from url_metric.tasks import metric
+
+        exports.DummyExporter.clear_metrics()
+        #custom_opener.urlopen("http://pubsub.pubnub.com/publish/pub-c-3083fedb-f124-44d2-a16b-74387d507a20/sub-c-b5b5eaae-8cd9-11e3-a56b-02ee2ddab7fe/fef4b684033fd6a0d536b492bbf2f657/channel_viljar_test/0/123")
+        metric_name = "External.%s.%s.%s" % ('Testing', 'GET', 200)
+        metric.delay(metric_name)
+        self.assertDictEqual(exports.DummyExporter.instance.metrics, {'External.Testing.GET.200': 1})
+
+        exports.DummyExporter.clear_metrics()
+        response = custom_opener.urlopen("https://maps.googleapis.com/maps/api/geocode/json?&sensor=false&latlng=37.5217949,-122.2802549")
+        self.assertEqual(response.code, 200)
+
+        response = custom_opener.urlopen("http://maps.google.com/maps/api/elevation/json?sensor=true&locations=34.239056,-116.948547")
+        self.assertEqual(response.code, 200)
+
+        response = custom_opener.urlopen("https://maps.googleapis.com/maps/api/timezone/json?&sensor=true&&location=34.239056,-116.948547&timestamp=1425641887.25")
+        self.assertEqual(response.code, 200)
+
+        self.assertDictEqual(exports.DummyExporter.instance.metrics, {
+                'External.maps.googleapis.com.TimeZone.GET.200': 1,
+                'External.maps.googleapis.com.GeoCode.GET.200': 1,
+                'External.maps.googleapis.com.Elevation.GET.200': 1
+            }
+        )
+
 
 class MiddlewareTest(LiveServerTestCase):
     @override_settings(URL_METRIC_URL_PATTERNS={r"200:GET:\/admin.*": "AdminPageView",

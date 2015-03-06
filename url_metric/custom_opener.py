@@ -1,3 +1,6 @@
+from url_metric import exports
+from django.conf import settings
+
 __author__ = 'margus'
 
 import logging
@@ -9,11 +12,15 @@ try:
 except:
     requests = None
 
-def metric_request(hostname, method, status_code):
+def metric_request(hostname, method, status_code, path = ''):
 
-    metric_name = "External.%s.%s.%s" % (hostname, method, status_code)
+    host_with_path = "%s%s" % (hostname, path)
+    host_url_metrics = getattr(settings, 'URL_METRIC_HOST_OVERRIDES', {})
+    host_url_metric = host_url_metrics.get(host_with_path, hostname)
+
+    metric_name = "External.%s.%s.%s" % (host_url_metric, method, status_code)
     from url_metric.tasks import metric
-    metric.delay(metric_name, hostname = hostname)
+    metric.delay(metric_name, hostname = host_url_metric)
 
 
 
@@ -34,6 +41,10 @@ class HTTPHandler(urllib2.HTTPHandler):
     def http_open(self, req):
         hostname = req.get_host()
         method = req.get_method()
+        url = req.get_full_url()
+
+        parsed = urlparse.urlparse(url)
+        path = parsed.path
 
         data = urllib2.HTTPHandler.http_open(self, req)
 
@@ -41,7 +52,7 @@ class HTTPHandler(urllib2.HTTPHandler):
         tasks.increase_host_count_task.delay(hostname)
 
         content = data.read()
-        metric_request(hostname, method, data.code)
+        metric_request(hostname, method, data.code, path)
 
         return WrappedResponse(data, content)
 
@@ -50,6 +61,10 @@ class HTTPSHandler(urllib2.HTTPSHandler):
     def https_open(self, req):
         hostname = req.get_host()
         method = req.get_method()
+        url = req.get_full_url()
+
+        parsed = urlparse.urlparse(url)
+        path = parsed.path
 
         data = urllib2.HTTPSHandler.https_open(self, req)
 
@@ -57,7 +72,7 @@ class HTTPSHandler(urllib2.HTTPSHandler):
         tasks.increase_host_count_task.delay(hostname)
 
         content = data.read()
-        metric_request(hostname, method, data.code)
+        metric_request(hostname, method, data.code, path)
 
         return WrappedResponse(data, content)
 
@@ -149,8 +164,9 @@ def requests_wrapper(method, url, *args, **kwargs):
     parsed = urlparse.urlparse(url)
     hostname = parsed.hostname
     req_method = r.request.method
+    path = parsed.path
 
-    metric_request(hostname, req_method, r.status_code)
+    metric_request(hostname, req_method, r.status_code, path)
 
     from url_metric import tasks
     tasks.increase_host_count_task.delay(hostname)

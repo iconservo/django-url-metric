@@ -4,7 +4,6 @@ from celery.task import task, periodic_task
 from celery.schedules import crontab
 import datetime
 import logging
-from django.conf import settings
 
 from url_metric import models, exports
 
@@ -43,6 +42,7 @@ def increase_host_count_metric(hostname):
 
 @task(name="url_metric.metric")
 def metric(metric_name, value=1, hostname = None):
+    result = None
     logger_host = ""
     if hostname:
         logger_host = ".%s" % hostname
@@ -51,7 +51,7 @@ def metric(metric_name, value=1, hostname = None):
         exporter = exports.get_exporter()
         debug_logger = logging.getLogger('external.debug%s' % logger_host)
         if exporter:
-            exporter.metric(metric_name, 1)
+            result = exporter.metric(metric_name, 1)
             debug_logger.debug("source: %s %s +%s" % (exporter.source, metric_name, value))
         else:
             debug_logger.debug("exporter: %s" % exporter)
@@ -60,6 +60,7 @@ def metric(metric_name, value=1, hostname = None):
         error_logger = logging.getLogger('external.error%s' % logger_host)
         error_logger.exception(metric_name)
 
+    return result
 
 @periodic_task(run_every=crontab(hour=0, minute=5), name="url_metric.export_host_data")
 def export_host_data(report_date=None):

@@ -180,14 +180,14 @@ def requests_wrapper(method, url, *args, **kwargs):
     req_method = r.request.method
     path = parsed.path
 
-    metric_request(hostname, req_method, r.status_code, path)
-
     from url_metric import tasks
     tasks.increase_host_count_task.delay(hostname)
 
     response_data = getattr(r, "content", None)
     logger = get_logger(hostname, path, 'access')#logging.getLogger("external.access.%s" % hostname)
     logger.info(msg="", extra={"url": url, "status_code": r.status_code, "response_data": response_data})
+
+    metric_request(hostname, req_method, r.status_code, path)
 
     return r
 

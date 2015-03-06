@@ -83,6 +83,11 @@ class SimpleTest(TestCase):
             }
         )
 
+        exports.DummyExporter.clear_metrics()
+        response = custom_opener.get("https://maps.googleapis.com/maps/api/timezone/json?&sensor=true&&location=34.239056,-116.948547&timestamp=1425641887.25")
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(exports.DummyExporter.instance.metrics, {'External.maps.googleapis.com.TimeZone.GET.200': 1})
+
 
 class MiddlewareTest(LiveServerTestCase):
     @override_settings(URL_METRIC_URL_PATTERNS={r"200:GET:\/admin.*": "AdminPageView",

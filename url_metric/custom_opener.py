@@ -9,24 +9,12 @@ try:
 except:
     requests = None
 
-from url_metric import exports
-
 def metric_request(hostname, method, status_code):
 
     metric_name = "External.%s.%s.%s" % (hostname, method, status_code)
+    from url_metric.tasks import metric
+    metric.delay(metric_name, hostname = hostname)
 
-    try:
-        exporter = exports.get_exporter()
-        debug_logger = logging.getLogger('external.debug.%s' % hostname)
-        if exporter:
-            exporter.metric(metric_name, 1)
-            debug_logger.debug("source: %s %s +1" % (exporter.source, metric_name))
-        else:
-            debug_logger.debug("exporter: %s" % exporter)
-
-    except Exception, e:
-        error_logger = logging.getLogger('external.error.%s' % hostname)
-        error_logger.exception(metric_name)
 
 
 class WrappedResponse(object):

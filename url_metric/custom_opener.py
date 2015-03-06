@@ -9,6 +9,45 @@ try:
 except:
     requests = None
 
+from url_metric import exports
+
+def metric_request(hostname, method, status_code):
+    host_metrics = {
+        'maps.google.com': 'external.%s' % hostname,
+        'maps.googleapis.com': 'external.%s' % hostname,
+        'api.smartystreets.com': 'external.%s' % hostname,
+        'pubsub.pubnub.com': 'external.%s' % hostname,
+    }
+
+    metric_name = host_metrics.get(hostname, None)
+    if metric_name is None:
+        return False
+
+    host_additional_name = {
+        'maps.google.com': '%s_%s' % (method, status_code),
+        'maps.googleapis.com': '%s_%s' % (method, status_code),
+        'api.smartystreets.com': '%s_%s' % (method, status_code),
+        'pubsub.pubnub.com': '%s_%s' % (method, status_code),
+    }
+
+    _additional = host_additional_name.get(hostname, None)
+    if _additional:
+        metric_name = "%s_%s" % (metric_name, _additional)
+
+    try:
+        exporter = exports.get_exporter()
+        debug_logger = logging.getLogger('external.debug.%s' % hostname)
+        if exporter:
+            exporter.metric(metric_name, 1)
+            debug_logger.debug("source: %s %s +1" % (exporter.source, metric_name))
+        else:
+            debug_logger.debug("exporter: %s" % exporter)
+
+    except Exception, e:
+        error_logger = logging.getLogger('external.error.%s' % hostname)
+        error_logger.exception(metric_name)
+
+
 class WrappedResponse(object):
     def __init__(self, response, content):
         self._read_content = content
@@ -24,26 +63,37 @@ class WrappedResponse(object):
 
 class HTTPHandler(urllib2.HTTPHandler):
     def http_open(self, req):
+        hostname = req.get_host()
+        method = req.get_method()
+
         data = urllib2.HTTPHandler.http_open(self, req)
+
+        """
         if data.code == 200:
             hostname = req.host
             from url_metric import tasks
             tasks.increase_host_count_task.delay(hostname)
-
+        """
         content = data.read()
+        metric_request(hostname, method, data.code)
 
         return WrappedResponse(data, content)
 
 
 class HTTPSHandler(urllib2.HTTPSHandler):
     def https_open(self, req):
+        hostname = req.get_host()
+        method = req.get_method()
+
         data = urllib2.HTTPSHandler.https_open(self, req)
+        """
         if data.code == 200:
             hostname = req.host
             from url_metric import tasks
             tasks.increase_host_count_task.delay(hostname)
-
+        """
         content = data.read()
+        metric_request(hostname, method, data.code)
 
         return WrappedResponse(data, content)
 
@@ -72,7 +122,19 @@ def urlopen(url, data=None, timeout=socket._GLOBAL_DEFAULT_TIMEOUT, *args, **kwa
     :return:
     """
     custom_opener = get_custom_opener()
-    return custom_opener.open(url, data, timeout, *args, **kwargs)
+    response = custom_opener.open(url, data, timeout, *args, **kwargs)
+    """
+    try:
+        custom_opener = get_custom_opener()
+        response = custom_opener.open(url, data, timeout, *args, **kwargs)
+    except Exception, e:
+        parsed = urlparse.urlparse(url)
+        hostname = parsed.hostname
+
+        logger = logging.getLogger("external.error.%s" % hostname)
+        logger.exception(extra={"url": url})
+    """
+    return response
 
 def get(url, *args, **kwargs):
     """
@@ -122,6 +184,9 @@ def requests_wrapper(method, url, *args, **kwargs):
     r = method(url, *args, **kwargs)
     parsed = urlparse.urlparse(url)
     hostname = parsed.hostname
+    req_method = r.request.method
+
+    metric_request(hostname, req_method, r.status_code)
 
     #from url_metric import tasks
     #tasks.increase_host_count_task.delay(hostname)

@@ -8,7 +8,6 @@ MAPPING = {}
 # TODO: custom source
 # TODO: rename metric to gauge
 
-
 def get_exporter():
     exporter_class_name = getattr(settings, "URL_METRIC_EXPORT_ENGINE", None)
     source = getattr(settings, "URL_METRIC_SOURCE", None)
@@ -37,6 +36,7 @@ class BaseExporter(object):
     def metric(self, metric, value=1):
         pass
 
+#Snippet: https://github.com/librato/python-librato/blob/master/librato/metrics.py
 class LibratoExporter(BaseExporter):
     """
     Direct librato exporter module
@@ -56,6 +56,13 @@ class LibratoExporter(BaseExporter):
 
     def metric(self, metric, value=1):
         return self.connection.submit(metric, value, source=self.source)
+
+    def gauge(self, metric, value=1):
+        return self.connection.submit(metric, value, type="qauge", source=self.source)
+
+    def counter(self, metric, value=1):
+        return self.connection.submit(metric, value, type="counter", source=self.source)
+
 
 
 try:

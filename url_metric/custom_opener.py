@@ -7,20 +7,37 @@ import logging
 import urlparse
 import socket
 import urllib2
+import json
+from inspect import isfunction
 try:
     import requests
 except:
     requests = None
 
-def metric_request(hostname, method, status_code, path = ''):
+def get_geocode_api_status(response):
+    try:
+        if hasattr(response, "json"):
+            return response.json()['status']
+        return json.loads(response)['status']
+
+    except Exception, e:
+        return None
+
+def metric_request(hostname, method, status_code, response, path = ''):
 
     host_with_path = "%s%s" % (hostname, path)
     host_url_metrics = getattr(settings, 'URL_METRIC_HOST_OVERRIDES', {})
-    host_url_metric = host_url_metrics.get(host_with_path, hostname)
+    (host_url_metric, func) = host_url_metrics.get(host_with_path, (hostname, None))
 
-    metric_name = "External.%s.%s.%s" % (host_url_metric, method, status_code)
+    extra_key = ''
+    if isfunction(func):
+        res = func(response)
+        if res:
+            extra_key = ".%s" % res
+
+    metric_name = "External.%s.%s.%s%s" % (host_url_metric, method, status_code, extra_key)
     from url_metric.tasks import metric
-    metric.delay(metric_name, hostname = host_url_metric)
+    metric.delay(metric_name, logger_prefix = host_url_metric)
 
 
 def get_logger(hostname, path = '', logger_type='debug'):
@@ -28,7 +45,7 @@ def get_logger(hostname, path = '', logger_type='debug'):
     host_url_loggers = getattr(settings, 'URL_METRIC_HOST_OVERRIDES', {})
 
     host_url_name = host_url_loggers.get(host_with_path, hostname)
-    logger_name = "external.%s.%s" % (logger_type, host_url_name)
+    logger_name = "external.%s.%s" % (logger_type, host_url_name[0])
 
     return logging.getLogger(logger_name)
 
@@ -63,7 +80,7 @@ class HTTPHandler(urllib2.HTTPHandler):
 
         logger = get_logger(hostname, path, 'access')
         logger.info(msg="", extra={"url": url, "status_code": data.code, "response_data": content})
-        metric_request(hostname, method, data.code, path)
+        metric_request(hostname, method, data.code, content, path)
 
         return WrappedResponse(data, content)
 
@@ -86,7 +103,7 @@ class HTTPSHandler(urllib2.HTTPSHandler):
 
         logger = get_logger(hostname, path, 'access')
         logger.info(msg="", extra={"url": url, "status_code": data.code, "response_data": content})
-        metric_request(hostname, method, data.code, path)
+        metric_request(hostname, method, data.code, content, path)
 
         return WrappedResponse(data, content)
 
@@ -187,7 +204,7 @@ def requests_wrapper(method, url, *args, **kwargs):
     logger = get_logger(hostname, path, 'access')#logging.getLogger("external.access.%s" % hostname)
     logger.info(msg="", extra={"url": url, "status_code": r.status_code, "response_data": response_data})
 
-    metric_request(hostname, req_method, r.status_code, path)
+    metric_request(hostname, req_method, r.status_code, r, path)
 
     return r
 

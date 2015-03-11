@@ -53,9 +53,9 @@ class SimpleTest(TestCase):
     @override_settings(URL_METRIC_EXPORT_ENGINE="dummy",
                        CELERY_ALWAYS_EAGER=True,
                        URL_METRIC_HOST_OVERRIDES = {
-                            'maps.googleapis.com/maps/api/timezone/json': "maps.googleapis.com.TimeZone",
-                            'maps.google.com/maps/api/elevation/json': "maps.google.com.Elevation",
-                            'maps.googleapis.com/maps/api/geocode/json': "maps.googleapis.com.GeoCode",
+                            'maps.googleapis.com/maps/api/timezone/json': ("maps.googleapis.com.TimeZone", custom_opener.get_geocode_api_status),
+                            'maps.google.com/maps/api/elevation/json': ("maps.google.com.Elevation", custom_opener.get_geocode_api_status),
+                            'maps.googleapis.com/maps/api/geocode/json': ("maps.googleapis.com.GeoCode", custom_opener.get_geocode_api_status),
                         })
     def test_metric(self):
         from url_metric.tasks import metric
@@ -77,16 +77,16 @@ class SimpleTest(TestCase):
         self.assertEqual(response.code, 200)
 
         self.assertDictEqual(exports.DummyExporter.instance.metrics, {
-                'External.maps.googleapis.com.TimeZone.GET.200': 1,
-                'External.maps.googleapis.com.GeoCode.GET.200': 1,
-                'External.maps.google.com.Elevation.GET.200': 1
+                'External.maps.googleapis.com.TimeZone.GET.200.OK': 1,
+                'External.maps.googleapis.com.GeoCode.GET.200.OK': 1,
+                'External.maps.google.com.Elevation.GET.200.OK': 1
             }
         )
 
         exports.DummyExporter.clear_metrics()
         response = custom_opener.get("https://maps.googleapis.com/maps/api/timezone/json?&sensor=true&&location=34.239056,-116.948547&timestamp=1425641887.25")
         self.assertEqual(response.status_code, 200)
-        self.assertDictEqual(exports.DummyExporter.instance.metrics, {'External.maps.googleapis.com.TimeZone.GET.200': 1})
+        self.assertDictEqual(exports.DummyExporter.instance.metrics, {'External.maps.googleapis.com.TimeZone.GET.200.OK': 1})
 
 
 class MiddlewareTest(LiveServerTestCase):

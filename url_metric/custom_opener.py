@@ -44,7 +44,7 @@ def get_logger(hostname, path = '', logger_type='debug'):
     host_with_path = "%s%s" % (hostname, path)
     host_url_loggers = getattr(settings, 'URL_METRIC_HOST_OVERRIDES', {})
 
-    host_url_name = host_url_loggers.get(host_with_path, hostname)
+    host_url_name = host_url_loggers.get(host_with_path, (hostname, None))
     logger_name = "external.%s.%s" % (logger_type, host_url_name[0])
 
     return logging.getLogger(logger_name)

@@ -52,8 +52,31 @@ def metric(metric_name, value=1, logger_prefix = None):
         exporter = exports.get_exporter()
         debug_logger = logging.getLogger('external.debug%s' % logger_extra)
         if exporter:
-            result = exporter.metric(metric_name, 1)
+            result = exporter.metric(metric_name, value)
             debug_logger.debug("source: %s %s +%s" % (exporter.source, metric_name, value))
+        else:
+            debug_logger.debug("exporter: %s" % exporter)
+
+    except Exception, e:
+        error_logger = logging.getLogger('external.error%s' % logger_extra)
+        error_logger.exception(metric_name)
+
+    return result
+
+@task(name="url_metric.counter")
+def counter(metric_name, value=1, logger_prefix = None):
+    logger_extra = ''
+    if logger_prefix:
+        logger_extra = ".%s" % logger_prefix
+
+    result = None
+
+    try:
+        exporter = exports.get_exporter()
+        debug_logger = logging.getLogger('external.debug%s' % logger_extra)
+        if exporter:
+            result = exporter.counter(metric_name, value)
+            debug_logger.debug("source: %s %s %s" % (exporter.source, metric_name, value))
         else:
             debug_logger.debug("exporter: %s" % exporter)
 

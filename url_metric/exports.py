@@ -105,6 +105,8 @@ class DummyExporter(BaseExporter):
         self.metrics.setdefault(metric, 0)
         self.metrics[metric] += value
 
+    gauge = metric
+
     def clear(self):
         self.metrics = {}
 

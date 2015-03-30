@@ -58,7 +58,7 @@ class LibratoExporter(BaseExporter):
         return self.connection.submit(metric, value, source=self.source)
 
     def gauge(self, metric, value=1):
-        return self.connection.submit(metric, value, type="qauge", source=self.source)
+        return self.connection.submit(metric, value, type="gauge", source=self.source)
 
     def counter(self, metric, value=1):
         return self.connection.submit(metric, value, type="counter", source=self.source)

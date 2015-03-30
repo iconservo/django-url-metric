@@ -8,6 +8,7 @@ Replace this with more appropriate tests for your application.
 from django.test import TestCase, LiveServerTestCase
 from django.test.utils import override_settings
 from url_metric import exports, custom_opener, models
+from django.core.cache import cache
 
 from django.conf import settings
 
@@ -88,6 +89,55 @@ class SimpleTest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(exports.DummyExporter.instance.metrics, {'External.maps.googleapis.com.TimeZone.GET.200.OK': 1})
 
+class RedisExporterTest(TestCase):
+    @override_settings(URL_METRIC_EXPORT_ENGINE="redis",
+                       URL_METRIC_LIBRATO_USER="test",
+                       URL_METRIC_LIBRATO_TOKEN="test",
+                       URL_METRIC_SOURCE="testing")
+    def test_redis_db_and_cache(self):
+        expected_cache_metrics = ['testing:gauge:RedisTest', 'testing:gauge:RedisTest2']
+
+        exporter = exports.get_exporter()
+        exporter.clean_cache()
+        for m_key in expected_cache_metrics:
+            self.assertFalse(cache.has_key(m_key))
+
+        exporter.gauge('RedisTest', 1)
+
+        env_metrics = exporter.get_environment_metrics()
+        self.assertEqual(len(env_metrics), 1)
+        metric_name = env_metrics[0]
+        self.assertEqual(metric_name, expected_cache_metrics[0])
+
+        self.assertTrue(cache.has_key(metric_name))
+        metric_count = cache.get(metric_name)
+        self.assertEqual(metric_count, 1)
+
+        exporter.gauge('RedisTest', 10)
+        env_metrics = exporter.get_environment_metrics()
+        self.assertEqual(len(env_metrics), 1)
+        metric_count = cache.get(metric_name)
+        self.assertEqual(metric_count, 11)
+
+        exporter.gauge('RedisTest2', 3)
+        env_metrics = exporter.get_environment_metrics()
+        self.assertEqual(len(env_metrics), 2)
+
+        self.assertTrue(env_metrics[0] in expected_cache_metrics)
+        self.assertTrue(env_metrics[1] in expected_cache_metrics)
+
+        metric_count = cache.get(env_metrics[0])
+        self.assertEqual(metric_count, 11)
+
+        metric_count = cache.get(env_metrics[1])
+        self.assertEqual(metric_count, 3)
+
+        exporter.save(commit=False)
+
+        env_metrics = exporter.get_environment_metrics()
+        self.assertEqual(len(env_metrics), 0)
+        for m_key in expected_cache_metrics:
+            self.assertFalse(cache.has_key(m_key))
 
 class MiddlewareTest(LiveServerTestCase):
     @override_settings(URL_METRIC_URL_PATTERNS={r"200:GET:\/admin.*": "AdminPageView",

@@ -36,8 +36,11 @@ def metric_request(hostname, method, status_code, response, path = ''):
             extra_key = ".%s" % res
 
     metric_name = "External.%s.%s.%s%s" % (host_url_metric, method, status_code, extra_key)
-    from url_metric.tasks import metric
-    metric.delay(metric_name, logger_prefix = host_url_metric)
+    try:
+        exporter = exports.get_exporter()
+        exporter.add_metric(metric_name)
+    except:
+        exports.error_logger.exception('Librato metric error.')
 
 
 def get_logger(hostname, path = '', logger_type='debug'):

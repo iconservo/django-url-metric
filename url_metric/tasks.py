@@ -41,10 +41,8 @@ def increase_host_count_metric(hostname):
 
 
 @task(name="url_metric.metric")
-def metric(metric_name, value=1, logger_prefix = None):
-    logger_extra = ''
-    if logger_prefix:
-        logger_extra = ".%s" % logger_prefix
+def metric(metric_name, value=1, logger_prefix = 'Librato'): #TODO: remove logger_prefix in input parameters
+    logger_extra = ".%s" % logger_prefix
 
     result = None
 
@@ -64,10 +62,8 @@ def metric(metric_name, value=1, logger_prefix = None):
     return result
 
 @task(name="url_metric.gauge")
-def gauge(metric_name, value=1, logger_prefix = None):
-    logger_extra = ''
-    if logger_prefix:
-        logger_extra = ".%s" % logger_prefix
+def gauge(metric_name, value=1, logger_prefix = 'Librato'): #TODO: remove logger_prefix in input parameters
+    logger_extra = ".%s" % logger_prefix
 
     result = None
 
@@ -87,10 +83,8 @@ def gauge(metric_name, value=1, logger_prefix = None):
     return result
 
 @task(name="url_metric.counter")
-def counter(metric_name, value=1, logger_prefix = None):
-    logger_extra = ''
-    if logger_prefix:
-        logger_extra = ".%s" % logger_prefix
+def counter(metric_name, value=1, logger_prefix = 'Librato'): #TODO: remove logger_prefix in input parameters
+    logger_extra = ".%s" % logger_prefix
 
     result = None
 

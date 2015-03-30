@@ -15,6 +15,10 @@ BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 import djcelery
 djcelery.setup_loader()
 
+from os.path import join, abspath, dirname
+here = lambda *x: join(abspath(dirname(__file__)), *x)
+PROJECT_ROOT = here('../..')
+root = lambda *x: join(abspath(PROJECT_ROOT), *x)
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/1.6/howto/deployment/checklist/
@@ -85,3 +89,23 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/1.6/howto/static-files/
 
 STATIC_URL = '/static/'
+
+REDIS_HOST = "localhost"
+REDIS_DB = 0
+BROKER_URL = 'redis://%s/%s' % (REDIS_HOST, REDIS_DB)
+REDIS_PORT = 6379
+REDIS_PASSWORD = ''
+
+COMPOSED_REDIS_CONNECTION = 'redis://%s:%s/%s' % (REDIS_HOST, REDIS_PORT, REDIS_DB)
+
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": COMPOSED_REDIS_CONNECTION,
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+        }
+    }
+}
+
+from .loggers import *

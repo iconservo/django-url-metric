@@ -116,3 +116,10 @@ def export_host_data(report_date=None):
         exporter.export(key, data.count)
 
     exporter.save()
+
+@periodic_task(run_every=crontab(hour=0, minute=5), name="url_metric.export_metric_data")
+def export_metric_data():
+    exports.debug_logger.debug("Export metric data")
+    exp = exports.get_exporter()
+    if exp:
+        exp.save()

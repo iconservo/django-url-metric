@@ -141,7 +141,7 @@ class RedisExporter(BaseExporter):
     def counter(self, metric, value=1, expires = None):
         self.add_metric_to_cache(metric, value, 'counter', expires)
 
-    def add_metric_to_cache(self, metric, value=1, metric_type = 'gauge', expires = 60):
+    def add_metric_to_cache(self, metric, value=1, metric_type = 'gauge', expires = None):
         if not self.source:
             return
 
@@ -201,9 +201,9 @@ class RedisExporter(BaseExporter):
 
         self.queue.add(slug, value, type=type, source=source)
 
-    def add_metric(self, metric_name, value = 1):
+    def add_metric(self, metric_name, value = 1, expires = 1800):
         try:
-            self.gauge(metric_name, value, 1800)
+            self.gauge(metric_name, value, expires)
 
         except Exception, e:
             error_logger.exception(metric_name)

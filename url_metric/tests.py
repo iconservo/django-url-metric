@@ -139,6 +139,65 @@ class RedisExporterTest(TestCase):
         for m_key in expected_cache_metrics:
             self.assertFalse(cache.has_key(m_key))
 
+    @override_settings(URL_METRIC_EXPORT_ENGINE="redis",
+                       URL_METRIC_LIBRATO_USER="test",
+                       URL_METRIC_LIBRATO_TOKEN="test",
+                       URL_METRIC_SOURCE="testing",
+                       URL_METRIC_HOST_OVERRIDES = {
+                            'maps.googleapis.com/maps/api/timezone/json': ("maps.googleapis.com.TimeZone", custom_opener.get_geocode_api_status),
+                            'maps.google.com/maps/api/elevation/json': ("maps.google.com.Elevation", custom_opener.get_geocode_api_status),
+                            'maps.googleapis.com/maps/api/geocode/json': ("maps.googleapis.com.GeoCode", custom_opener.get_geocode_api_status),
+                        },
+                       CELERY_ALWAYS_EAGER=True,
+                       TEST_RUNNER='djcelery.contrib.test_runner.CeleryTestSuiteRunner'
+    )
+    def test_metric(self):
+        from url_metric.tasks import export_metric_data
+        expected_cache_metrics = [
+            'testing:gauge:External.Testing.GET.200',
+            'testing:gauge:External.maps.googleapis.com.TimeZone.GET.200.OK',
+            'testing:gauge:External.maps.googleapis.com.GeoCode.GET.200.OK',
+            'testing:gauge:External.maps.google.com.Elevation.GET.200.OK',
+        ]
+
+        exporter = exports.get_exporter()
+        exporter.clean_cache()
+
+        metric_name = "External.%s.%s.%s" % ('Testing', 'GET', 200)
+        exporter.metric(metric_name)
+        env_metrics = exporter.get_environment_metrics()
+        self.assertEqual(len(env_metrics), 1)
+
+        self.assertTrue(env_metrics[0] in expected_cache_metrics)
+
+        exporter.clean_cache()
+        response = custom_opener.urlopen("https://maps.googleapis.com/maps/api/geocode/json?&sensor=false&latlng=37.5217949,-122.2802549")
+        self.assertEqual(response.code, 200)
+
+        response = custom_opener.urlopen("http://maps.google.com/maps/api/elevation/json?sensor=true&locations=34.239056,-116.948547")
+        self.assertEqual(response.code, 200)
+
+        response = custom_opener.urlopen("https://maps.googleapis.com/maps/api/timezone/json?&sensor=true&&location=34.239056,-116.948547&timestamp=1425641887.25")
+        self.assertEqual(response.code, 200)
+
+        env_metrics = exporter.get_environment_metrics()
+        self.assertEqual(len(env_metrics), 3)
+        for metric in env_metrics:
+            metric_value = cache.get(metric, -1)
+            self.assertEqual(metric_value, 1)
+
+        old_env_metrics = env_metrics
+
+        exporter.save(commit=False)
+        #export_metric_data.delay()
+
+        env_metrics = exporter.get_environment_metrics()
+        self.assertEqual(len(env_metrics), 0)
+        for metric in old_env_metrics:
+            metric_value = cache.get(metric, -1)
+            self.assertEqual(metric_value, -1)
+
+
 class MiddlewareTest(LiveServerTestCase):
     @override_settings(URL_METRIC_URL_PATTERNS={r"200:GET:\/admin.*": "AdminPageView",
                                                 r"200:PUT:\/asd/asd/.*": "Change ASD",},

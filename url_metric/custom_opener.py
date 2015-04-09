@@ -73,9 +73,6 @@ class HTTPHandler(urllib2.HTTPHandler):
 
         data = urllib2.HTTPHandler.http_open(self, req)
 
-        from url_metric import tasks
-        tasks.increase_host_count_task.delay(hostname)
-
         content = data.read()
 
         logger = get_logger(hostname, path, 'access')
@@ -95,9 +92,6 @@ class HTTPSHandler(urllib2.HTTPSHandler):
         path = parsed.path
 
         data = urllib2.HTTPSHandler.https_open(self, req)
-
-        from url_metric import tasks
-        tasks.increase_host_count_task.delay(hostname)
 
         content = data.read()
 
@@ -196,9 +190,6 @@ def requests_wrapper(method, url, *args, **kwargs):
     hostname = parsed.hostname
     req_method = r.request.method
     path = parsed.path
-
-    from url_metric import tasks
-    tasks.increase_host_count_task.delay(hostname)
 
     response_data = getattr(r, "content", None)
     logger = get_logger(hostname, path, 'access')#logging.getLogger("external.access.%s" % hostname)

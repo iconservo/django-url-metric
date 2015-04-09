@@ -22,10 +22,6 @@ class UrlMeaningMiddleware(object):
         if not self.metric_exporter:
             raise MiddlewareNotUsed()
 
-    def metric(self, metric_name, value=1):
-        self.metric_exporter.metric(metric_name, value)
-
-
     def process_response(self, request, response):
         path = request.path
         status_code = response.status_code
@@ -38,7 +34,7 @@ class UrlMeaningMiddleware(object):
                 metrics.add(v)
 
         for metric_name in metrics:
-            self.metric(metric_name)
+            metric.apply_async((metric_name, ))
 
         return response
 
@@ -64,6 +60,6 @@ class RequestTimerMiddleware(object):
 
         current_time = datetime.datetime.today()
         delta = current_time - last_request_time
-        metric(self.TIMER_METRIC_NAME, delta.microseconds)
+        metric.apply_async((self.TIMER_METRIC_NAME, delta.microseconds,))
 
         return response
